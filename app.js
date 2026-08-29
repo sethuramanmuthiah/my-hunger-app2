@@ -130,11 +130,19 @@ function renderNearbyResults(elements, latitude, longitude) {
 async function searchNearby(latitude, longitude) {
   const query = `[out:json][timeout:20];(nwr[amenity=shelter](around:10000,${latitude},${longitude});nwr[social_facility=food_bank](around:10000,${latitude},${longitude});nwr[social_facility=group_home](around:10000,${latitude},${longitude});nwr[amenity=community_centre](around:10000,${latitude},${longitude}););out center tags;`;
   const endpoints = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  console.log('Searching nearby at coordinates:', latitude, longitude);
   for (const endpoint of endpoints) {
     try {
+      console.log('Trying Overpass endpoint:', endpoint);
       const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
-      if (response.ok) return response.json();
+      console.log('Overpass response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Overpass data received:', data);
+        return data;
+      }
     } catch (error) {
+      console.log('Overpass endpoint failed:', endpoint, error);
       // Try the next public Overpass server.
     }
   }
@@ -187,9 +195,14 @@ pinForm.addEventListener('submit', async (event) => {
   submitButton.innerHTML = '<i data-lucide="loader-circle"></i> Searching';
   lucide.createIcons();
   try {
-    const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(`${enteredCity}, India`)}`);
+    console.log('Searching for city:', enteredCity);
+    const searchUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(`${enteredCity}, India`)}`;
+    console.log('API URL:', searchUrl);
+    const geocodeResponse = await fetch(searchUrl);
+    console.log('Geocode response status:', geocodeResponse.status);
     if (!geocodeResponse.ok) throw new Error('City lookup failed');
     const locations = await geocodeResponse.json();
+    console.log('Locations found:', locations);
     if (!locations.length) {
       nearbyResults.innerHTML = '<div class="empty-results"><span class="empty-icon"><i data-lucide="search-x"></i></span><div><strong>City not found in India</strong><p>Check the spelling and try again.</p></div></div>';
       lucide.createIcons();
@@ -197,7 +210,9 @@ pinForm.addEventListener('submit', async (event) => {
     }
     const latitude = Number(locations[0].lat);
     const longitude = Number(locations[0].lon);
+    console.log('City coordinates:', latitude, longitude);
     const data = await searchNearby(latitude, longitude);
+    console.log('Nearby results:', data);
     showRealMap(latitude, longitude);
     renderNearbyResults(data.elements, latitude, longitude);
     showToast(`${data.elements.length} organizations found near ${enteredCity}.`);
