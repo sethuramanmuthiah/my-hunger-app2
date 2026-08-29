@@ -127,26 +127,33 @@ function renderNearbyResults(elements, latitude, longitude) {
   lucide.createIcons();
 }
 
-async function searchNearby(latitude, longitude) {
-  const query = `[out:json][timeout:20];(nwr[amenity=shelter](around:10000,${latitude},${longitude});nwr[social_facility=food_bank](around:10000,${latitude},${longitude});nwr[social_facility=group_home](around:10000,${latitude},${longitude});nwr[amenity=community_centre](around:10000,${latitude},${longitude}););out center tags;`;
+async function searchNearby(latitude, longitude, cityName = '') {
+  // Simplified Overpass query - less likely to timeout or error
+  const query = `[out:json][timeout:10];(node[amenity=shelter](around:10000,${latitude},${longitude});node[social_facility=food_bank](around:10000,${latitude},${longitude}););out center tags;`;
   const endpoints = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
   console.log('Searching nearby at coordinates:', latitude, longitude);
+  
   for (const endpoint of endpoints) {
     try {
       console.log('Trying Overpass endpoint:', endpoint);
-      const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
+      const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, { timeout: 10000 });
       console.log('Overpass response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('Overpass data received:', data);
-        return data;
+        console.log('Overpass data received, elements:', data.elements?.length);
+        if (data.elements && data.elements.length > 0) {
+          return data;
+        }
       }
     } catch (error) {
-      console.log('Overpass endpoint failed:', endpoint, error);
-      // Try the next public Overpass server.
+      console.log('Overpass endpoint error:', endpoint, error.message);
+      // Try the next server
     }
   }
-  throw new Error('Nearby search failed');
+  
+  console.log('All Overpass endpoints failed');
+  throw new Error('Nearby search failed - unable to connect to any Overpass server');
 }
 
 function resetFinderButton() {
@@ -211,7 +218,7 @@ pinForm.addEventListener('submit', async (event) => {
     const latitude = Number(locations[0].lat);
     const longitude = Number(locations[0].lon);
     console.log('City coordinates:', latitude, longitude);
-    const data = await searchNearby(latitude, longitude);
+    const data = await searchNearby(latitude, longitude, enteredCity);
     console.log('Nearby results:', data);
     showRealMap(latitude, longitude);
     renderNearbyResults(data.elements, latitude, longitude);
@@ -222,7 +229,7 @@ pinForm.addEventListener('submit', async (event) => {
     showToast('City search could not connect.');
   } finally {
     submitButton.disabled = false;
-    submitButton.innerHTML = '<i data-lucide="search"></i> Search PIN';
+    submitButton.innerHTML = '<i data-lucide="search"></i> Search city';
     lucide.createIcons();
   }
 });
