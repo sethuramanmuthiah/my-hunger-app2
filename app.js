@@ -176,9 +176,9 @@ nearbyButton.addEventListener('click', () => {
 
 pinForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const enteredPin = pinCode.value.trim();
-  if (!/^[0-9A-Za-z -]{3,10}$/.test(enteredPin)) {
-    showToast('Enter a valid PIN code.');
+  const enteredCity = pinCode.value.trim();
+  if (!/^[a-zA-Z\s\-]{2,30}$/.test(enteredCity)) {
+    showToast('Enter a valid city name.');
     pinCode.focus();
     return;
   }
@@ -187,11 +187,11 @@ pinForm.addEventListener('submit', async (event) => {
   submitButton.innerHTML = '<i data-lucide="loader-circle"></i> Searching';
   lucide.createIcons();
   try {
-    const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(`${enteredPin}, India`)}`);
-    if (!geocodeResponse.ok) throw new Error('PIN lookup failed');
+    const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(`${enteredCity}, India`)}`);
+    if (!geocodeResponse.ok) throw new Error('City lookup failed');
     const locations = await geocodeResponse.json();
     if (!locations.length) {
-      nearbyResults.innerHTML = '<div class="empty-results"><span class="empty-icon"><i data-lucide="search-x"></i></span><div><strong>PIN code not found in India</strong><p>Check the six-digit code and try again.</p></div></div>';
+      nearbyResults.innerHTML = '<div class="empty-results"><span class="empty-icon"><i data-lucide="search-x"></i></span><div><strong>City not found in India</strong><p>Check the spelling and try again.</p></div></div>';
       lucide.createIcons();
       return;
     }
@@ -200,11 +200,11 @@ pinForm.addEventListener('submit', async (event) => {
     const data = await searchNearby(latitude, longitude);
     showRealMap(latitude, longitude);
     renderNearbyResults(data.elements, latitude, longitude);
-    showToast(`${data.elements.length} organizations found near ${enteredPin}.`);
+    showToast(`${data.elements.length} organizations found near ${enteredCity}.`);
   } catch (error) {
     nearbyResults.innerHTML = '<div class="empty-results"><span class="empty-icon"><i data-lucide="wifi-off"></i></span><div><strong>Nearby search is temporarily unavailable</strong><p>The public directory did not respond. Please try again in a moment.</p></div></div>';
     lucide.createIcons();
-    showToast('PIN search could not connect.');
+    showToast('City search could not connect.');
   } finally {
     submitButton.disabled = false;
     submitButton.innerHTML = '<i data-lucide="search"></i> Search PIN';
